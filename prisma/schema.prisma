@@ -28,21 +28,115 @@ enum SessionStatus {
   CANCELLED
 }
 
+enum VerifiedStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  BUSY
+  UNAVAILABLE
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      UserRole @default(STUDENT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String             @id @default(uuid())
+  email          String             @unique
+  password       String
+  name           String
+  role           UserRole           @default(STUDENT)
+  verifiedStatus VerifiedStatus     @default(PENDING)
+  domainTags     String[]
+  availability   AvailabilityStatus @default(AVAILABLE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   mentorProfile    MentorProfile?
   studentProfile   StudentProfile?
-  sentRequests     MentorRequest[] @relation("StudentRequests")
-  receivedRequests MentorRequest[] @relation("MentorRequests")
-  reviews          Review[]        @relation("ReviewAuthor")
-  receivedReviews  Review[]        @relation("ReviewTarget")
+  sentRequests     MentorRequest[]   @relation("StudentRequests")
+  receivedRequests MentorRequest[]  @relation("MentorRequests")
+  reviews          Review[]          @relation("ReviewAuthor")
+  receivedReviews  Review[]          @relation("ReviewTarget")
+  institutionId    String?
+  institution      Institution?      @relation(fields: [institutionId], references: [id])
+  employments      Employment[]
+  circleMemberships CircleMembership[]
+  createdCircles   Circle[]         @relation("CircleCreator")
+  impactScores     ImpactScore[]
+}
+
+model Institution {
+  id        String   @id @default(uuid())
+  name      String
+  type      String?  // e.g. UNIVERSITY, COLLEGE, SCHOOL
+  website   String?
+  location  String?
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Employer {
+  id          String       @id @default(uuid())
+  name        String
+  industry    String?
+  website     String?
+  employments Employment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Employment {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  employerId String
+  employer   Employer @relation(fields: [employerId], references: [id])
+  title      String?
+  startDate  DateTime?
+  endDate    DateTime?
+  isCurrent  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, employerId])
+}
+
+model Circle {
+  id          String           @id @default(uuid())
+  name        String
+  description String?
+  creatorId   String
+  creator     User             @relation("CircleCreator", fields: [creatorId], references: [id])
+  memberships CircleMembership[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model CircleMembership {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  circleId  String
+  circle    Circle   @relation(fields: [circleId], references: [id])
+  role      String?  // e.g. ADMIN, MEMBER
+  joinedAt  DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, circleId])
+}
+
+model ImpactScore {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  score     Float
+  category  String?  // e.g. MENTORING, LEARNING, COMMUNITY
+  period    String?  // e.g. MONTHLY, QUARTERLY
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model MentorProfile {
